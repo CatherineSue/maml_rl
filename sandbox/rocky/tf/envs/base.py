@@ -1,3 +1,5 @@
+import gym
+
 from rllab.envs.proxy_env import ProxyEnv
 from rllab.envs.base import EnvSpec
 from rllab.spaces.box import Box as TheanoBox
@@ -10,13 +12,11 @@ from cached_property import cached_property
 
 
 def to_tf_space(space):
-    if isinstance(space, TheanoBox):
+    if isinstance(space, gym.spaces.Box):
         return Box(low=space.low, high=space.high)
-    elif isinstance(space, TheanoDiscrete):
+    elif isinstance(space, gym.spaces.Discrete):
         return Discrete(space.n)
-    elif isinstance(space, TheanoProduct):
-        return Product(list(map(to_tf_space, space.components)))
-    else:
+    elif isinstance(space, gym.spaces.Tuple):
         raise NotImplementedError
 
 

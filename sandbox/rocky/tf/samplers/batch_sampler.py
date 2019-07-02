@@ -49,9 +49,11 @@ class BatchSampler(BaseSampler):
             cur_policy_params = [flatten_tensors(x.values()) for x in self.algo.policy.all_param_vals]
         else:
             cur_policy_params = [cur_policy_params]*self.n_envs
+        print('sequentially sampling path...')
         # do tasks sequentially and parallelize within rollouts per task.
         paths = {}
         for i in range(self.n_envs):
+            print('sampling paths[{}]'.format(i))
             paths[i] = parallel_sampler.sample_paths(
                 policy_params=cur_policy_params[i],
                 env_params=cur_env_params,
@@ -59,7 +61,7 @@ class BatchSampler(BaseSampler):
                 max_path_length=self.algo.max_path_length,
                 scope=self.algo.scope,
                 reset_arg=reset_args[i],
-                show_prog_bar=False,
+                show_prog_bar=True,
             )
         total_time = time.time() - start
         logger.record_tabular(log_prefix+"TotalExecTime", total_time)

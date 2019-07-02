@@ -1,3 +1,4 @@
+import gym.spaces
 import numpy as np
 
 from rllab import spaces
@@ -6,6 +7,45 @@ from rllab.envs.proxy_env import ProxyEnv
 from rllab.spaces.box import Box
 from rllab.misc.overrides import overrides
 from rllab.envs.base import Step
+
+
+def flat_dim(space):
+    if isinstance(space, gym.spaces.Box):
+        return np.prod(space.low.shape)
+    elif isinstance(space, gym.spaces.Discrete):
+        return space.n
+    elif isinstance(space, gym.spaces.Tuple):
+        return np.sum([flat_dim(x) for x in space.spaces])
+    else:
+        raise NotImplementedError
+
+
+class BabyModeWrapper(gym.Wrapper, Serializable):
+    def __init__(self, env):
+        Serializable.quick_init(self, locals())
+        super().__init__(env)
+
+    '''
+    MAML sampler api
+    
+    In baby mode, tasks will be reset in the environment reset
+    function so we ignore task sampling/setting
+    Tasks should be sampled before construnction.
+    '''
+    def sample_tasks(self, meta_batch_size):
+        return [None] * meta_batch_size
+    
+    def set_task(self, task):
+        pass
+
+    def reset(self, reset_args):
+        return self.env.reset()
+
+    def log_diagnostics(self, paths, prefix):
+        pass
+
+    def sample_goals(self, batch_size):
+        return self.env.sample_goals(batch_size)
 
 
 class NormalizedEnv(ProxyEnv, Serializable):
@@ -24,8 +64,9 @@ class NormalizedEnv(ProxyEnv, Serializable):
         self._normalize_obs = normalize_obs
         self._normalize_reward = normalize_reward
         self._obs_alpha = obs_alpha
-        self._obs_mean = np.zeros(env.observation_space.flat_dim)
-        self._obs_var = np.ones(env.observation_space.flat_dim)
+        flat_obs_dim = flat_dim(env.observation_space)
+        self._obs_mean = np.zeros(flat_obs_dim)
+        self._obs_var = np.ones(flat_obs_dim)
         self._reward_alpha = reward_alpha
         self._reward_mean = 0.
         self._reward_var = 1.
@@ -93,6 +134,7 @@ class NormalizedEnv(ProxyEnv, Serializable):
 
     def __str__(self):
         return "Normalized: %s" % self._wrapped_env
+    
 
     # def log_diagnostics(self, paths):
     #     print "Obs mean:", self._obs_mean
